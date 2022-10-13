@@ -1,3 +1,7 @@
+use aoc_runner_derive::aoc_lib;
+
+mod day1;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
@@ -12,3 +16,5 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
+
+aoc_lib! { year = 2022 }

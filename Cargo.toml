@@ -6,3 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+salusa_aoc = {path = "../salusa_aoc" }
+anyhow = "1"
+aoc-runner = "0.3.0"
+aoc-runner-derive = "0.3.0"
+regex = "1.5.4"
+lazy_static = "1.4.0"
+itertools = "0.10.1"
+num-integer = "0.1"
+colored =  "2.0.0"
