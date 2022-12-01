@@ -1,7 +1,7 @@
 use aoc_runner_derive::aoc_lib;
 
 mod day1;
-
+mod day2;
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
