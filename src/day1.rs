@@ -47,7 +47,6 @@ fn part2(input: &Input) -> Result<Output> {
     Ok(result)
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
