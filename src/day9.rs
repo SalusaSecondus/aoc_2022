@@ -1,7 +1,8 @@
 use std::{collections::HashSet, str::FromStr};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
+use strum::EnumString;
 
 type Input = Vec<Command>;
 type Output = usize;
@@ -26,7 +27,7 @@ fn step(coord: &Coord, dir: Direction) -> Coord {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 enum Direction {
     U,
     D,
@@ -38,21 +39,6 @@ enum Direction {
 struct Command {
     dist: u32,
     dir: Direction,
-}
-
-impl FromStr for Direction {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let result = match s {
-            "U" => Direction::U,
-            "D" => Direction::D,
-            "L" => Direction::L,
-            "R" => Direction::R,
-            _ => bail!("Unknown direction: {}", s),
-        };
-        Ok(result)
-    }
 }
 
 impl FromStr for Command {
