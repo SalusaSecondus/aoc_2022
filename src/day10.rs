@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use advent_of_code_ocr::parse_string_to_letters;
 use anyhow::{bail, Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
 
@@ -114,17 +115,20 @@ fn part1(input: &Input) -> Result<Output> {
 #[allow(clippy::comparison_chain)]
 fn part2(input: &Input) -> Result<Output> {
     let mut cpu = Cpu::new();
+    let mut result = String::new();
     while cpu.cycle <= 240 {
         let (cycle, register) = cpu.step(input)?;
         let current_position = ((cycle - 1) % 40) as i32;
 
         let visible = (register - current_position).abs() < 2; // Do we care about registers off the range?
-        let sym = if visible { '#' } else { '.' };
-        print!("{}", sym);
+        let sym = if visible { "#" } else { "." };
+        result += sym;
         if current_position == 39 {
-            println!();
+            result += "\n";
         }
     }
+    let parsed = parse_string_to_letters(&result);
+    println!("{}\n{}", result, parsed);
     Ok(0)
 }
 
