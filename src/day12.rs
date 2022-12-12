@@ -111,6 +111,9 @@ fn part2(input: &Input) -> Result<Output> {
     while !queue.is_empty() {
         let node = queue.pop_front().unwrap();
         let my_dist = *dists.get(&node).context("No dist to current node")?;
+        if my_dist >= best_dist - 1 {
+            continue;
+        }
         if let Some(edges) = graph.edges(&node) {
             for e in edges {
                 if !dists.contains_key(e) {
