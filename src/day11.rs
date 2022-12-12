@@ -4,6 +4,7 @@ use anyhow::{ensure, Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
 use num_integer::Integer;
+use salusa_aoc::SalusaAocIter;
 
 type Input = Vec<Monkey>;
 type Output = u64;
@@ -233,6 +234,25 @@ fn part2(input: &Input) -> Result<Output> {
         .map(|m| m.inspections)
         .sorted_unstable_by(|a, b| b.cmp(a))
         .take(2)
+        .product();
+
+    Ok(result)
+}
+
+#[aoc(day11, part2, heap)]
+fn part2_heap(input: &Input) -> Result<Output> {
+    let reduction = input.iter().map(|m| m.test).fold(1, |a, b| a.lcm(&b));
+    let mut input = input.clone();
+    for _ in 0..10000 {
+        for idx in 0..input.len() {
+            action2(&mut input, idx, reduction, false)?;
+        }
+    }
+
+    let result = input
+        .iter()
+        .map(|m| m.inspections)
+        .max_n(2).iter()
         .product();
 
     Ok(result)
