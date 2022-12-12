@@ -252,7 +252,8 @@ fn part2_heap(input: &Input) -> Result<Output> {
     let result = input
         .iter()
         .map(|m| m.inspections)
-        .max_n(2).iter()
+        .max_n(2)
+        .iter()
         .product();
 
     Ok(result)
