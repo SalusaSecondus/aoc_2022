@@ -6,7 +6,7 @@ use itertools::Itertools;
 use salusa_aoc::{Graph, MatrixTranspose};
 
 type Coord = (i32, i32);
-type Input = (Graph<Coord>, Coord, Coord, Vec<Vec<i8>>);
+type Input = (Graph<Coord, u32>, Coord, Coord, Vec<Vec<i8>>);
 type Output = u32;
 
 #[aoc_generator(day12)]
@@ -39,7 +39,7 @@ fn input_generator(input: &str) -> Result<Input> {
 
     let max_x = heights.len() - 1;
     let max_y = heights[0].len() - 1;
-    let mut graph: Graph<Coord> = Graph::new(false);
+    let mut graph: Graph<Coord, u32> = Graph::new(false);
     for (x, col) in heights.iter().enumerate() {
         for (y, curr_height) in col.iter().enumerate() {
             // let curr_height = heights[x][y];
@@ -66,6 +66,7 @@ fn can_move(curr_height: i8, end_height: i8) -> bool {
 }
 
 #[aoc(day12, part1)]
+#[allow(clippy::map_entry)]
 fn part1(input: &Input) -> Result<Output> {
     let mut dists: HashMap<Coord, u32> = HashMap::new();
     let graph = &input.0;
@@ -79,15 +80,13 @@ fn part1(input: &Input) -> Result<Output> {
     while !queue.is_empty() {
         let node = queue.pop_front().unwrap();
         let my_dist = *dists.get(&node).context("No dist to current node")?;
-        if let Some(edges) = graph.edges(&node) {
-            for e in edges {
-                if !dists.contains_key(e) {
-                    dists.insert(*e, my_dist + 1);
-                    queue.push_back(*e);
-                }
-                if *e == end {
-                    return Ok(my_dist + 1);
-                }
+        for e in graph.edges(&node) {
+            if e == end {
+                return Ok(my_dist + 1);
+            }
+            if !dists.contains_key(&e) {
+                dists.insert(e, my_dist + 1);
+                queue.push_back(e);
             }
         }
     }
@@ -95,7 +94,17 @@ fn part1(input: &Input) -> Result<Output> {
     bail!("No path found");
 }
 
+#[aoc(day12, part1, provided)]
+fn part1_provided(input: &Input) -> Result<Output> {
+    let graph = &input.0;
+    let start = input.1;
+    let dists = graph.distance_map(&start);
+
+    dists.get(&input.2).copied().context("no path found")
+}
+
 #[aoc(day12, part2)]
+#[allow(clippy::map_entry)]
 fn part2(input: &Input) -> Result<Output> {
     let mut dists: HashMap<Coord, u32> = HashMap::new();
     let graph = input.0.transpose();
@@ -112,23 +121,41 @@ fn part2(input: &Input) -> Result<Output> {
         let node = queue.pop_front().unwrap();
         let my_dist = *dists.get(&node).context("No dist to current node")?;
         if my_dist >= best_dist - 1 {
-            continue;
+            return Ok(best_dist);
         }
-        if let Some(edges) = graph.edges(&node) {
-            for e in edges {
-                if !dists.contains_key(e) {
-                    dists.insert(*e, my_dist + 1);
-                    queue.push_back(*e);
-                    if heights[e.0 as usize][e.1 as usize] == 1 && my_dist + 1 < best_dist {
-                        // println!("Found new best {} at {:?}", my_dist + 1, e);
-                        best_dist = my_dist + 1;
-                    }
+        for e in graph.edges(&node) {
+            if !dists.contains_key(&e) {
+                dists.insert(e, my_dist + 1);
+                queue.push_back(e);
+                if heights[e.0 as usize][e.1 as usize] == 1 && my_dist + 1 < best_dist {
+                    // println!("Found new best {} at {:?}", my_dist + 1, e);
+                    best_dist = my_dist + 1;
                 }
             }
         }
     }
 
     Ok(best_dist)
+}
+
+#[aoc(day12, part2, provided)]
+fn part2_provided(input: &Input) -> Result<Output> {
+    let graph = input.0.transpose();
+    let dists: HashMap<Coord, u32> = graph.distance_map(&input.2);
+    let heights = &input.3;
+
+    dists
+        .iter()
+        .flat_map(|(coord, dist)| {
+            if heights[coord.0 as usize][coord.1 as usize] == 1 {
+                Some(dist)
+            } else {
+                None
+            }
+        })
+        .copied()
+        .min()
+        .context("None found")
 }
 
 #[cfg(test)]
@@ -145,6 +172,7 @@ mod test {
     fn part1_test() -> Result<()> {
         let input = input_generator(INPUT_STR)?;
         assert_eq!(part1(&input)?, 31);
+        assert_eq!(part1_provided(&input)?, 31);
         Ok(())
     }
 
@@ -152,6 +180,7 @@ mod test {
     fn part2_test() -> Result<()> {
         let input = input_generator(INPUT_STR)?;
         assert_eq!(part2(&input)?, 29);
+        assert_eq!(part2_provided(&input)?, 29);
         Ok(())
     }
 }
