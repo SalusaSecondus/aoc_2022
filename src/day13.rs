@@ -1,66 +1,19 @@
 use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
+use nom::{
+    branch::alt,
+    character::{self, complete::i32},
+    combinator::map,
+    multi::separated_list0,
+    sequence::delimited,
+    IResult,
+};
 
 type Input = Vec<(Packet, Packet)>;
 type Output = i32;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Token {
-    Open,
-    Close,
-    Number(i32),
-}
-
-fn tokenize(s: &str) -> Result<Vec<Token>> {
-    let mut result = vec![];
-
-    let mut working = String::new();
-    for c in s.chars() {
-        // println!("Tokenizing: {}", c);
-        match c {
-            '[' => result.push(Token::Open),
-            ']' => {
-                if !working.is_empty() {
-                    result.push(Token::Number(working.parse()?));
-                    working.clear();
-                };
-                result.push(Token::Close);
-            }
-            ',' => {
-                if !working.is_empty() {
-                    result.push(Token::Number(working.parse()?));
-                    working.clear();
-                };
-            }
-            _ => working += &c.to_string(),
-        }
-    }
-
-    Ok(result)
-}
-
-fn packetize(tokens: &mut impl Iterator<Item = Token>) -> Option<Packet> {
-    if let Some(next) = tokens.next() {
-        if let Token::Number(n) = next {
-            Some(Packet::Number(n))
-        } else if Token::Close == next {
-            None
-        } else {
-            // Open
-            let mut list = vec![];
-
-            while let Some(p) = packetize(tokens) {
-                list.push(p);
-            }
-            Some(Packet::List(list))
-        }
-    } else {
-        None
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Packet {
@@ -72,9 +25,10 @@ impl FromStr for Packet {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tokens = tokenize(s)?;
-        let result = packetize(&mut tokens.iter().copied());
-        result.context("No packet found")
+        match nom_packet_list(s) {
+            Ok((_, i)) => Ok(i),
+            Err(e) => bail!("Error parsing {}", e),
+        }
     }
 }
 
@@ -106,6 +60,21 @@ impl Display for Packet {
             Packet::List(v) => write!(f, "[{}]", v.iter().join(",")),
         }
     }
+}
+
+fn nom_packet_list(s: &str) -> IResult<&str, Packet> {
+    let num_parser = map(i32, Packet::Number);
+    map(
+        delimited(
+            character::complete::char('['),
+            separated_list0(
+                character::complete::char(','),
+                alt((num_parser, nom_packet_list)),
+            ),
+            character::complete::char(']'),
+        ),
+        Packet::List,
+    )(s)
 }
 
 #[aoc_generator(day13)]
