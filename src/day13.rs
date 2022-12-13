@@ -86,44 +86,15 @@ impl Ord for Packet {
 
 impl PartialOrd for Packet {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        if let Packet::Number(s) = self {
-            if let Packet::Number(o) = other {
-                Some(s.cmp(o))
-            } else {
-                Packet::List(vec![Packet::Number(*s)]).partial_cmp(other)
-            }
-        } else {
-            if let Packet::Number(n) = other {
-                return self.partial_cmp(&Packet::List(vec![Packet::Number(*n)]));
-            }
-            let left = match self {
-                Packet::Number(_) => panic!("unreachable1"),
-                Packet::List(v) => v,
-            };
-            let right = match other {
-                Packet::Number(_) => panic!("unreachable2"),
-                Packet::List(v) => v,
-            };
-            let mut left = left.iter();
-            let mut right = right.iter();
-            loop {
-                let n_l = left.next();
-                let n_r = right.next();
-
-                if n_l.is_none() && n_r.is_none() {
-                    return Some(Ordering::Equal);
-                } else if n_l.is_none() {
-                    return Some(Ordering::Less);
-                } else if n_r.is_none() {
-                    return Some(Ordering::Greater);
-                } else {
-                    #[allow(clippy::unnecessary_unwrap)]
-                    let sub_ordering = n_l.unwrap().partial_cmp(n_r.unwrap()).unwrap();
-                    if sub_ordering != Ordering::Equal {
-                        return Some(sub_ordering);
-                    }
-                }
-            }
+        match self {
+            Packet::Number(left) => match other {
+                Packet::Number(right) => left.partial_cmp(right),
+                Packet::List(right) => vec![Packet::Number(*left)].partial_cmp(right),
+            },
+            Packet::List(left) => match other {
+                Packet::Number(right) => left.partial_cmp(&vec![Packet::Number(*right)]),
+                Packet::List(right) => left.partial_cmp(right),
+            },
         }
     }
 }
