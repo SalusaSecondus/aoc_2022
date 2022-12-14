@@ -122,6 +122,29 @@ fn part2(input: &Input) -> Result<Output> {
     Ok(result)
 }
 
+#[aoc(day13, part2, unsorted)]
+fn part2_unsorted(input: &Input) -> Result<Output> {
+    let indicator1: Packet = "[[2]]".parse()?;
+    let indicator2: Packet = "[[6]]".parse()?;
+    let mut head = 1;
+    let mut middle = 1;
+
+    for p in input {
+        if p.0 < indicator1 {
+            head += 1;
+        } else if p.0 < indicator2 {
+            middle += 1;
+        }
+        if p.1 < indicator1 {
+            head += 1;
+        } else if p.1 < indicator2 {
+            middle += 1;
+        }
+    }
+
+    Ok(head * (head + middle))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -164,6 +187,7 @@ mod test {
     fn part2_test() -> Result<()> {
         let input = input_generator(INPUT_STR)?;
         assert_eq!(part2(&input)?, 140);
+        assert_eq!(part2_unsorted(&input)?, 140);
         Ok(())
     }
 }
