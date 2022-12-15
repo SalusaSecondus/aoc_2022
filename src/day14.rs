@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::{bail, Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
+use colored::{Colorize, Color};
 use nom::{
     bytes::complete::tag,
     character::{self, complete::i16},
@@ -90,14 +91,14 @@ fn input_generator(input: &str) -> Result<Input> {
 #[allow(dead_code)]
 fn print_map(input: &Input) {
     for y in i16::min(input.min.1, 0)..input.max.1 + 2 {
-        for x in input.min.0 - 10..=input.max.0 + 10 {
+        for x in input.min.0 - 40..=input.max.0 + 40 {
             let sym = if let Some(obs) = input.map.get(&(x, y)) {
                 match obs {
-                    Obstacle::Rock => '#',
-                    Obstacle::Sand => 'o',
+                    Obstacle::Rock => "#".color(Color::White),
+                    Obstacle::Sand => "o".color(Color::Yellow),
                 }
             } else {
-                '.'
+                " ".color(Color::Black)
             };
             print!("{}", sym);
         }
@@ -219,7 +220,7 @@ fn part2_fast(input: &Input) -> Result<Output> {
         drop_sand3(&mut input);
         steps += 1;
     }
-    // print_map(&input);
+    print_map(&input);
 
     Ok(steps)
 }
