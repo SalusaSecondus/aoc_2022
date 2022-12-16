@@ -9,9 +9,9 @@ use salusa_aoc::Graph;
 #[derive(Debug, Clone)]
 struct Input {
     #[allow(dead_code)]
-    map: Graph<String, u32>,
-    flows: HashMap<String, u32>,
-    dists: HashMap<String, HashMap<String, u32>>,
+    map: Graph<u16, u32>,
+    flows: HashMap<u16, u32>,
+    dists: HashMap<u16, HashMap<u16, u32>>,
 }
 
 type Output = u32;
@@ -28,11 +28,12 @@ fn input_generator(input: &str) -> Result<Input> {
 
     for line in input.lines() {
         if let Some(m) = RE.captures(line) {
-            let name = m.get(1).context("No name")?.as_str().to_owned();
+            let name = m.get(1).context("No name")?.as_str();
+            let name = name_to_id(name);
             let flow = m.get(2).context("No flow")?.as_str().parse::<u32>()?;
 
             for out in m.get(3).context("No tunnels")?.as_str().split(", ") {
-                map.add_edge(name.clone(), out.to_owned());
+                map.add_edge(name, name_to_id(out));
             }
             flows.insert(name, flow);
         } else {
@@ -42,20 +43,25 @@ fn input_generator(input: &str) -> Result<Input> {
 
     let mut dists = HashMap::new();
     for node in flows.keys() {
-        dists.insert(node.clone(), map.distance_map(node));
+        dists.insert(*node, map.distance_map(node));
     }
 
     Ok(Input { map, flows, dists })
 }
 
-fn set_without(set: &HashSet<String>, node: &str) -> Result<HashSet<String>> {
+const fn name_to_id(name: &str) -> u16 {
+    let b = name.as_bytes();
+    ((b[0] as u16) << 8) +  b[1] as u16
+}
+
+fn set_without(set: &HashSet<u16>, node: &u16) -> Result<HashSet<u16>> {
     let mut set = set.clone();
     ensure!(set.remove(node));
 
     Ok(set)
 }
 
-fn sub1(node: &str, input: &Input, time_left: u32, useful: HashSet<String>) -> Result<u32> {
+fn sub1(node: u16, input: &Input, time_left: u32, useful: HashSet<u16>) -> Result<u32> {
     let mut prefix = String::new();
     for _ in time_left..30 {
         prefix += "  ";
@@ -63,15 +69,15 @@ fn sub1(node: &str, input: &Input, time_left: u32, useful: HashSet<String>) -> R
     if time_left <= 1 {
         return Ok(0);
     } else if time_left == 2 {
-        if useful.contains(node) {
-            return input.flows.get(node).copied().context("No self flow");
+        if useful.contains(&node) {
+            return input.flows.get(&node).copied().context("No self flow");
         } else {
             return Ok(0);
         }
     }
-    let dists = input.dists.get(node).context("No dists")?;
+    let dists = input.dists.get(&node).context("No dists")?;
 
-    let my_val = input.flows.get(node).context("No self flow")? * (time_left - 1);
+    let my_val = input.flows.get(&node).context("No self flow")? * (time_left - 1);
     let mut best = my_val;
     let my_cost = if my_val > 0 { 1 } else { 0 };
     // println!("{}Visiting {}({}): Providing {}", prefix, node, 30 - time_left, my_val);
@@ -82,7 +88,7 @@ fn sub1(node: &str, input: &Input, time_left: u32, useful: HashSet<String>) -> R
             continue;
         }
         let attempt = sub1(
-            next,
+            *next,
             input,
             time_left - my_cost - step_length,
             set_without(&useful, next)?,
@@ -94,35 +100,37 @@ fn sub1(node: &str, input: &Input, time_left: u32, useful: HashSet<String>) -> R
     Ok(best)
 }
 
+const AA: u16 = name_to_id("AA");
+
 #[aoc(day16, part1)]
 fn part1(input: &Input) -> Result<Output> {
     let mut useful_valves = HashSet::new();
     for (valve, flow) in &input.flows {
         if flow > &0 {
-            useful_valves.insert(valve.clone());
+            useful_valves.insert(*valve);
         }
     }
-    sub1("AA", input, 30, useful_valves)
+    sub1(AA, input, 30, useful_valves)
 }
 
 fn sub2(
     input: &Input,
-    me: &mut HashSet<String>,
-    elephant: &mut HashSet<String>,
-    useful: &mut Vec<String>,
+    me: &mut HashSet<u16>,
+    elephant: &mut HashSet<u16>,
+    useful: &mut Vec<u16>,
 ) -> Result<Output> {
     if let Some(next_node) = useful.pop() {
-        me.insert(next_node.clone());
+        me.insert(next_node);
         let left = sub2(input, me, elephant, useful)?;
         me.remove(&next_node);
-        elephant.insert(next_node.clone());
+        elephant.insert(next_node);
         let right = sub2(input, me, elephant, useful)?;
         elephant.remove(&next_node);
         useful.push(next_node);
         Ok(left.max(right))
     } else {
-        sub1("AA", input, 26, me.clone())
-            .and_then(|m| Ok(m + sub1("AA", input, 26, elephant.clone())?))
+        sub1(AA, input, 26, me.clone())
+            .and_then(|m| Ok(m + sub1(AA, input, 26, elephant.clone())?))
     }
 }
 
@@ -133,7 +141,7 @@ fn part2(input: &Input) -> Result<Output> {
     let mut useful_valves = vec![];
     for (valve, flow) in &input.flows {
         if flow > &0 {
-            useful_valves.push(valve.clone());
+            useful_valves.push(*valve);
         }
     }
     let mut me = HashSet::new();
