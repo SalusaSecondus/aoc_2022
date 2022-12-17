@@ -4,7 +4,7 @@ use anyhow::{bail, Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
 use lazy_static::lazy_static;
 use regex::Regex;
-use salusa_aoc::Graph;
+use salusa_aoc::{Graph, bitset::BitSet};
 
 #[derive(Debug, Clone)]
 struct Input {
@@ -71,61 +71,13 @@ fn get_id(ids: &mut HashMap<String, u8>, name: &str) -> u8 {
     *ids.entry(name.to_string()).or_insert(len)
 }
 
-fn set_contains(set: &u64, node: u8) -> bool {
-    assert!(node < 64);
-    (set & 1 << node) != 0
-}
-
-fn set_insert(set: &mut u64, node: u8) {
-    assert!(node < 64);
-    *set |= 1 << node;
-}
-
-fn set_remove(set: &mut u64, node: u8) {
-    assert!(node < 64);
-    let mask = !(1u64 << node);
-    *set &= mask;
-}
-
-fn set_without(set: &u64, node: &u8) -> u64 {
+fn set_without(set: &BitSet<u64>, value: &u8) -> BitSet<u64> {
     let mut set = *set;
-    set_remove(&mut set, *node);
+    set.remove(value);
     set
 }
 
-struct SetIterator {
-    set: u64,
-    curr: u8,
-}
-
-impl SetIterator {
-    fn of(set: &u64) -> Self {
-        let mut curr = 0;
-        while curr < 64 && !set_contains(set, curr) {
-            curr += 1;
-        }
-        Self { set: *set, curr }
-    }
-}
-
-impl Iterator for SetIterator {
-    type Item = u8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.curr >= 64 {
-            None
-        } else {
-            let result = Some(self.curr);
-            self.curr += 1;
-            while self.curr < 64 && !set_contains(&self.set, self.curr) {
-                self.curr += 1
-            }
-            result
-        }
-    }
-}
-
-fn sub1(node: u8, input: &Input, time_left: u32, useful: u64) -> Result<u32> {
+fn sub1(node: u8, input: &Input, time_left: u32, useful: BitSet<u64>) -> Result<u32> {
     let mut prefix = String::new();
     for _ in time_left..30 {
         prefix += "  ";
@@ -133,7 +85,7 @@ fn sub1(node: u8, input: &Input, time_left: u32, useful: u64) -> Result<u32> {
     if time_left <= 1 {
         return Ok(0);
     } else if time_left == 2 {
-        if set_contains(&useful, node) {
+        if useful.contains(&node) {
             return Ok(input.flows[node as usize]);
         } else {
             return Ok(0);
@@ -146,7 +98,7 @@ fn sub1(node: u8, input: &Input, time_left: u32, useful: u64) -> Result<u32> {
     let my_cost = if my_val > 0 { 1 } else { 0 };
     // println!("{}Visiting {}({}): Providing {}", prefix, node, 30 - time_left, my_val);
 
-    for next in SetIterator::of(&useful) {
+    for next in useful {
         let step_length = dists[next as usize];
         if step_length + 1 > time_left {
             continue;
@@ -166,23 +118,23 @@ fn sub1(node: u8, input: &Input, time_left: u32, useful: u64) -> Result<u32> {
 
 #[aoc(day16, part1)]
 fn part1(input: &Input) -> Result<Output> {
-    let mut useful_valves = 0u64;
+    let mut useful_valves = BitSet::new();
     for (valve, flow) in input.flows.iter().enumerate() {
         if flow > &0 {
-            set_insert(&mut useful_valves, valve as u8);
+            useful_valves.insert(valve as u8);
         }
     }
     sub1(input.aa, input, 30, useful_valves)
 }
 
-fn sub2(input: &Input, me: &mut u64, elephant: &mut u64, useful: &mut Vec<u8>) -> Result<Output> {
+fn sub2(input: &Input, me: &mut BitSet<u64>, elephant: &mut BitSet<u64>, useful: &mut Vec<u8>) -> Result<Output> {
     if let Some(next_node) = useful.pop() {
-        set_insert(me, next_node);
+        me.insert(next_node);
         let left = sub2(input, me, elephant, useful)?;
-        set_remove(me, next_node);
-        set_insert(elephant, next_node);
+        me.remove(&next_node);
+        elephant.insert(next_node);        
         let right = sub2(input, me, elephant, useful)?;
-        set_remove(elephant, next_node);
+        elephant.remove(&next_node);
         useful.push(next_node);
         Ok(left.max(right))
     } else {
@@ -200,9 +152,9 @@ fn part2(input: &Input) -> Result<Output> {
             useful_valves.push(valve as u8);
         }
     }
-    let mut me = 0u64;
-    let mut elephant = 0u64;
-    set_insert(&mut me, useful_valves.pop().context("No valves")?);
+    let mut me = BitSet::new();
+    let mut elephant = BitSet::new();
+    me.insert(useful_valves.pop().context("No valves")?);
     sub2(input, &mut me, &mut elephant, &mut useful_valves)
 }
 
