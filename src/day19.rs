@@ -1,12 +1,10 @@
-use core::time;
-use std::{collections::{HashSet, HashMap}, fmt::Display, str::FromStr};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use anyhow::{Context, Result};
 use aoc_runner_derive::{aoc, aoc_generator};
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
-use strum::{EnumCount, EnumDiscriminants, EnumIter, IntoEnumIterator};
+use strum::{EnumCount, EnumIter, IntoEnumIterator};
 
 type Input = Vec<Blueprint>;
 type Output = u32;
@@ -95,7 +93,11 @@ impl World {
         let resources = [0u16; Resource::COUNT];
         let mut bots = [0u16; Resource::COUNT];
         bots[Resource::Ore.idx()] = 1;
-        Self { resources, bots, time_left }
+        Self {
+            resources,
+            bots,
+            time_left,
+        }
     }
 
     fn step_time(&self, resource: Option<Resource>, blueprint: &Blueprint) -> Option<World> {
@@ -107,13 +109,23 @@ impl World {
                     return None;
                 }
             }
-            // We can afford it
+
+            if resource != Resource::Geode {
+                let max_needed = blueprint
+                    .recipes
+                    .iter()
+                    .map(|needs| needs[resource.idx()])
+                    .max()
+                    .unwrap_or_default();
+                if self.bots[resource.idx()] >= max_needed {
+                    return None;
+                }
+            };
             for (resource_idx, cost) in blueprint.recipes[resource.idx()].iter().enumerate() {
                 result.resources[resource_idx] -= cost;
             }
 
             result.bots[resource.idx()] += 1;
-
         }
 
         // Purposefully using bots from old world to avoid newly created one
@@ -128,7 +140,9 @@ impl World {
 
 impl Display for World {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "World: Ore {} ({}), Clay: {} ({}), Obsidian {} ({}), Geode {} ({})",
+        write!(
+            f,
+            "World: Ore {} ({}), Clay: {} ({}), Obsidian {} ({}), Geode {} ({})",
             self.resources[Resource::Ore.idx()],
             self.bots[Resource::Ore.idx()],
             self.resources[Resource::Clay.idx()],
@@ -137,7 +151,7 @@ impl Display for World {
             self.bots[Resource::Obsidian.idx()],
             self.resources[Resource::Geode.idx()],
             self.bots[Resource::Geode.idx()],
-    )
+        )
     }
 }
 
@@ -150,7 +164,7 @@ fn most_geodes(blueprint: &Blueprint, world: World, saved: &mut HashMap<World, u
             // println!("Found saved with {} minutes left. {}", world.time_left, world);
             return *result;
         }
-        // println!("Not saved with {} minutes left. {}", world.time_left, world);    
+        // println!("Not saved with {} minutes left. {}", world.time_left, world);
     }
 
     // Try all possible next steps and find the max
@@ -160,10 +174,10 @@ fn most_geodes(blueprint: &Blueprint, world: World, saved: &mut HashMap<World, u
         // Not worth creating a new bot
         return most_geodes(blueprint, world.step_time(None, blueprint).unwrap(), saved);
     } else if let Some(next) = world.step_time(Some(Resource::Geode), blueprint) {
-    // If we can create a new Geode bot, that's always the thing to do
+        // If we can create a new Geode bot, that's always the thing to do
 
         return most_geodes(blueprint, next, saved);
-    } 
+    }
 
     for new_bot in Resource::iter() {
         if let Some(next) = world.step_time(Some(new_bot), blueprint) {
@@ -190,7 +204,10 @@ fn most_geodes(blueprint: &Blueprint, world: World, saved: &mut HashMap<World, u
 fn part1(input: &Input) -> Result<Output> {
     Ok(input
         .iter()
-        .map(|bp| {println!("Looking at blueprint {}", bp.idx); bp})
+        .map(|bp| {
+            println!("Looking at blueprint {}", bp.idx);
+            bp
+        })
         .map(|bp| bp.idx as u32 * most_geodes(bp, World::new(24), &mut HashMap::new()))
         .sum())
 }
@@ -202,38 +219,58 @@ fn part2(input: &Input) -> Result<Output> {
         .iter()
         .take(3)
         .inspect(|bp| println!("Looking at blueprint {}", bp.idx))
-        .map(|bp|most_geodes(bp, World::new(32), &mut HashMap::new()))
+        .map(|bp| most_geodes(bp, World::new(32), &mut HashMap::new()))
         .inspect(|geodes| println!("\tMade {} geodes.", geodes))
         .product())
 }
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
+
     use super::*;
 
     const INPUT_STR: &str = "Blueprint 1:    Each ore robot costs 4 ore.   Each clay robot costs 2 ore.    Each obsidian robot costs 3 ore and 14 clay.    Each geode robot costs 2 ore and 7 obsidian.
   Blueprint 2:    Each ore robot costs 2 ore.    Each clay robot costs 3 ore.    Each obsidian robot costs 3 ore and 8 clay.    Each geode robot costs 3 ore and 12 obsidian.";
 
     #[test]
+    #[ignore]
     fn part1_test() -> Result<()> {
         let input = input_generator(INPUT_STR)?;
-        assert_eq!(most_geodes(&input[0], World::new(24), &mut HashMap::new()), 9);
+        assert_eq!(
+            most_geodes(&input[0], World::new(24), &mut HashMap::new()),
+            9
+        );
         println!("Blueprint 1 is good!");
-        assert_eq!(most_geodes(&input[1], World::new(24), &mut HashMap::new()), 12);
+        assert_eq!(
+            most_geodes(&input[1], World::new(24), &mut HashMap::new()),
+            12
+        );
         println!("Blueprint 2 is good!");
         assert_eq!(part1(&input)?, 33);
         Ok(())
     }
 
     #[test]
+    #[ignore]
     fn part2_test() -> Result<()> {
-        let input = input_generator(INPUT_STR)?.iter().take(3).copied().collect_vec();
-        assert_eq!(most_geodes(&input[0], World::new(32), &mut HashMap::new()), 56);
+        let input = input_generator(INPUT_STR)?
+            .iter()
+            .take(3)
+            .copied()
+            .collect_vec();
+        assert_eq!(
+            most_geodes(&input[0], World::new(32), &mut HashMap::new()),
+            56
+        );
         println!("Blueprint 1 is good!");
-        assert_eq!(most_geodes(&input[1], World::new(32), &mut HashMap::new()), 62);
+        assert_eq!(
+            most_geodes(&input[1], World::new(32), &mut HashMap::new()),
+            62
+        );
         println!("Blueprint 2 is good!");
         let input = input_generator(INPUT_STR)?;
-        assert_eq!(part2(&input)?, 56*62);
+        assert_eq!(part2(&input)?, 56 * 62);
         Ok(())
     }
 }
