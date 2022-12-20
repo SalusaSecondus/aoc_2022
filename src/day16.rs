@@ -95,7 +95,7 @@ fn sub1(node: u8, input: &Input, time_left: u32, useful: BitSet<u64>) -> Result<
 
     let my_val = input.flows[node as usize] * (time_left - 1);
     let mut best = my_val;
-    let my_cost = if my_val > 0 { 1 } else { 0 };
+    let my_cost = (my_val > 0) as u32;
     // println!("{}Visiting {}({}): Providing {}", prefix, node, 30 - time_left, my_val);
 
     for next in useful {
