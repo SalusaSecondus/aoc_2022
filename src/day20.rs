@@ -80,9 +80,11 @@ impl Node {
 
         let old_next = self.next.upgrade().context("reference died")?;
         self.next = RefCell::borrow(node).me.clone();
-        RefCell::borrow_mut(node).prev = self.me.clone();
-        RefCell::borrow_mut(node).next = RefCell::borrow(&old_next).me.clone();
-        RefCell::borrow_mut(&old_next).prev = RefCell::borrow(node).me.clone();
+        let mut node = RefCell::borrow_mut(node);
+        let mut old_next = RefCell::borrow_mut(&old_next);
+        node.prev = self.me.clone();
+        node.next = old_next.me.clone();
+        old_next.prev = node.me.clone();
 
         Ok(())
     }
@@ -96,8 +98,9 @@ impl Node {
         self.prev = Rc::downgrade(node);
 
         RefCell::borrow_mut(&old_prev).next = self.prev.clone();
-        RefCell::borrow_mut(node).prev = Rc::downgrade(&old_prev);
-        RefCell::borrow_mut(node).next = self.me.clone();
+        let mut node = RefCell::borrow_mut(node);
+        node.prev = Rc::downgrade(&old_prev);
+        node.next = self.me.clone();
 
         Ok(())
     }
@@ -119,11 +122,14 @@ impl Node {
         let old_prev = self.prev.upgrade().context("reference died")?;
         let old_next = self.next.upgrade().context("reference died")?;
 
-        self.prev = RefCell::borrow(&old_prev).next.clone();
-        self.next = RefCell::borrow(&old_next).prev.clone();
+        let mut old_next = RefCell::borrow_mut(&old_next);
+        let mut old_prev = RefCell::borrow_mut(&old_prev);
 
-        RefCell::borrow_mut(&old_prev).next = Rc::downgrade(&old_next);
-        RefCell::borrow_mut(&old_next).prev = Rc::downgrade(&old_prev);
+        self.prev = old_prev.next.clone();
+        self.next = old_next.prev.clone();
+
+        old_prev.next = old_next.me.clone();
+        old_next.prev = old_prev.me.clone();
 
         Ok(())
     }
@@ -165,20 +171,25 @@ fn step(node: &Rc<RefCell<Node>>, steps: i64, node_count: i64) -> Result<Rc<RefC
         return Ok(node.clone());
     }
     let mut curr = node.clone();
+    let steps = steps % (node_count);
+
     let (forward, steps) = if steps > 0 {
         (true, steps)
     } else {
         (false, -steps)
     };
-    let steps = steps % (node_count);
+    let (forward, steps) = if steps > node_count / 2 {
+        (!forward, node_count - steps)
+    } else  {
+        (forward, steps)
+    };
 
     for _ in 0..steps {
-        let next_cell = if forward {
-            curr.borrow().next.clone()
+        curr = if forward {
+            curr.borrow().next.upgrade().context("dead reference")?
         } else {
-            curr.borrow().prev.clone()
+            curr.borrow().prev.upgrade().context("dead reference")?
         };
-        curr = next_cell.upgrade().context("dead reference")?;
     }
     Ok(curr)
 }
@@ -187,6 +198,7 @@ fn move_node(node: &Rc<RefCell<Node>>, node_count: i64) -> Result<()> {
     let prev = node.borrow().prev.clone();
     node.borrow_mut().remove_self()?;
     let steps = node.borrow().value;
+
     let prev = step(&prev.upgrade().context("dead node")?, steps, node_count - 1)?;
 
     prev.borrow_mut().insert_after(node)?;
