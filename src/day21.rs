@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context, Result, ensure};
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
 
@@ -66,6 +66,28 @@ fn monkey_value(
     Ok(result)
 }
 
+
+fn monkey_value2(
+    name: &str,
+    monkeys: &HashMap<String, MonkeyAction>,
+    cache: &mut HashMap<String, i64>,
+) -> Result<i64> {
+    ensure!(name != "humn");
+    if let Some(result) = cache.get(name) {
+        return Ok(*result);
+    }
+    let monkey_action = monkeys.get(name).context("Bad monkey name")?;
+    let result = match monkey_action {
+        MonkeyAction::Number(num) => *num,
+        MonkeyAction::Operation(a, _, b) => monkey_action.apply(
+            monkey_value2(a, monkeys, cache)?,
+            monkey_value2(b, monkeys, cache)?,
+        )?,
+    };
+    cache.insert(name.to_owned(), result);
+    Ok(result)
+}
+
 #[aoc_generator(day21)]
 fn input_generator(input: &str) -> Result<Input> {
     let mut result = HashMap::new();
@@ -91,16 +113,15 @@ fn find_human(
     monkeys: &HashMap<String, MonkeyAction>,
     cache: &mut HashMap<String, i64>,
 ) -> Result<i64> {
+    // println!("Inspecting {}", name);
     if name == "humn" {
         return Ok(target_value);
     }
     if let MonkeyAction::Operation(left, op, right) = monkeys.get(name).context("Bad monkey")? {
-        let mut left_cache = cache.clone();
-        let left_value = monkey_value(left, monkeys, &mut left_cache)?;
+        let left_value = monkey_value2(left, monkeys, cache);
         // We're going to assume that the human is only ever on one side
-        if !left_cache.contains_key("humn") {
-            cache.extend(left_cache);
-
+        if let Ok(left_value) = left_value {
+            // println!("Going right");
             let target_value = match op.as_str() {
                 "+" => target_value - left_value,
                 "-" => left_value - target_value,
@@ -111,6 +132,8 @@ fn find_human(
             find_human(right, target_value, monkeys, cache)
         } else {
             // Human is on the left
+            // println!("Going left");
+
             let right_value = monkey_value(right, monkeys, cache)?;
 
             let target_value = match op.as_str() {
@@ -163,10 +186,6 @@ mod test {
     fn part1_test() -> Result<()> {
         let input = input_generator(INPUT_STR)?;
         println!("{:?}", input);
-        // print_map(&input);
-        // while !drop_sand(&mut input) {
-        //     print_map(&input);
-        // }
 
         assert_eq!(part1(&input)?, 152);
         Ok(())
@@ -175,12 +194,6 @@ mod test {
     #[test]
     fn part2_test() -> Result<()> {
         let input = input_generator(INPUT_STR)?;
-        // for idx in 0..95 {
-        //     drop_sand2(&mut input);
-        //     println!("Cycle {}:", idx);
-        //     print_map(&input);
-        // }
-        // todo!();
         assert_eq!(part2(&input)?, 301);
         Ok(())
     }
