@@ -51,7 +51,7 @@ fn part1(input: &Input) -> Result<Output> {
     for bag in input {
         for item in bag.0.keys() {
             if bag.1.contains_key(item) {
-                println!("{} {}", item, priority(*item));
+                // println!("{} {}", item, priority(*item));
                 result += priority(*item);
             }
         }

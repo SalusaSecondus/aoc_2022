@@ -76,7 +76,7 @@ fn part1(input: &Input) -> Result<Output> {
     let mut stacks = input.0.clone();
 
     for m in &input.1 {
-        println!("{:?}", m);
+        // println!("{:?}", m);
 
         for _ in 0..m.count {
             let c = stacks[m.source].pop().context("Underflow")?;
@@ -95,7 +95,7 @@ fn part2(input: &Input) -> Result<Output> {
     let mut stacks = input.0.clone();
 
     for m in &input.1 {
-        println!("{:?}", m);
+        // println!("{:?}", m);
 
         let mut current = vec![];
         for _ in 0..m.count {

@@ -30,8 +30,8 @@ impl Resource {
 
 #[derive(Debug, Clone, Copy)]
 struct Blueprint {
-    idx: u16,
-    recipes: [[u16; Resource::COUNT]; Resource::COUNT],
+    idx: u8,
+    recipes: [[u8; Resource::COUNT]; Resource::COUNT],
 }
 
 impl Display for Blueprint {
@@ -64,7 +64,7 @@ impl FromStr for Blueprint {
         let geode_ore = groups.get(6).context("No geode_ore")?.as_str().parse()?;
         let geode_obs = groups.get(7).context("No geode_obs")?.as_str().parse()?;
 
-        let mut recipes = [[0u16; Resource::COUNT]; Resource::COUNT];
+        let mut recipes = [[0u8; Resource::COUNT]; Resource::COUNT];
         recipes[Resource::Ore.idx()][Resource::Ore.idx()] = ore_cost;
         recipes[Resource::Clay.idx()][Resource::Ore.idx()] = clay_ore;
         recipes[Resource::Obsidian.idx()][Resource::Ore.idx()] = obs_ore;
@@ -83,15 +83,15 @@ fn input_generator(input: &str) -> Result<Input> {
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 struct World {
-    resources: [u16; Resource::COUNT],
-    bots: [u16; Resource::COUNT],
-    time_left: u16,
+    resources: [u8; Resource::COUNT],
+    bots: [u8; Resource::COUNT],
+    time_left: u8,
 }
 
 impl World {
-    fn new(time_left: u16) -> Self {
-        let resources = [0u16; Resource::COUNT];
-        let mut bots = [0u16; Resource::COUNT];
+    fn new(time_left: u8) -> Self {
+        let resources = [0u8; Resource::COUNT];
+        let mut bots = [0u8; Resource::COUNT];
         bots[Resource::Ore.idx()] = 1;
         Self {
             resources,
@@ -177,9 +177,16 @@ fn most_geodes(blueprint: &Blueprint, world: World, saved: &mut HashMap<World, u
         // If we can create a new Geode bot, that's always the thing to do
 
         return most_geodes(blueprint, next, saved);
+    } else if world.time_left == 2 {
+        // Not worth building anything else
+        return most_geodes(blueprint, world.step_time(None, blueprint).unwrap(), saved);
     }
 
     for new_bot in Resource::iter() {
+        if world.time_left == 3 && Resource::Clay == new_bot {
+            // Clay isn't worth it here and geode bots are covered above
+            continue;
+        }
         if let Some(next) = world.step_time(Some(new_bot), blueprint) {
             // println!("Build a bot for {:?} with {} minutes left. {:?}", new_bot, time_left, next);
 
@@ -204,10 +211,9 @@ fn most_geodes(blueprint: &Blueprint, world: World, saved: &mut HashMap<World, u
 fn part1(input: &Input) -> Result<Output> {
     Ok(input
         .iter()
-        .map(|bp| {
-            println!("Looking at blueprint {}", bp.idx);
-            bp
-        })
+        // .inspect(|bp| {
+        //     println!("Looking at blueprint {}", bp.idx);
+        // })
         .map(|bp| bp.idx as u32 * most_geodes(bp, World::new(24), &mut HashMap::new()))
         .sum())
 }
@@ -218,7 +224,7 @@ fn part2(input: &Input) -> Result<Output> {
     Ok(input
         .iter()
         .take(3)
-        .inspect(|bp| println!("Looking at blueprint {}", bp.idx))
+        // .inspect(|bp| println!("Looking at blueprint {}", bp.idx))
         .map(|bp| most_geodes(bp, World::new(32), &mut HashMap::new()))
         .inspect(|geodes| println!("\tMade {} geodes.", geodes))
         .product())

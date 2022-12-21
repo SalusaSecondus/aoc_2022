@@ -220,7 +220,7 @@ fn part2_fast(input: &Input) -> Result<Output> {
         drop_sand3(&mut input);
         steps += 1;
     }
-    print_map(&input);
+    // print_map(&input);
 
     Ok(steps)
 }
