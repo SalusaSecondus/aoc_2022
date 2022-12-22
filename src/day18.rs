@@ -42,8 +42,8 @@ fn input_generator(input: &str) -> Result<Input> {
 
 #[aoc(day18, part1)]
 fn part1(input: &Input) -> Result<Output> {
-    println!("Min: {:?}", input.min);
-    println!("Max: {:?}", input.max);
+    // println!("Min: {:?}", input.min);
+    // println!("Max: {:?}", input.max);
     let map = &input.map;
     let mut border = map.len() * 6;
     for c in map {
