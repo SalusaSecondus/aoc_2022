@@ -14,7 +14,30 @@ fn part1(input: &Input) -> Result<Output> {
     todo!("Write me")
 }
 
-#[aoc(day1, dayN)]
+#[aoc(dayN, part1)]
 fn part2(input: &Input) -> Result<Output> {
     todo!("Write me")
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const INPUT_STR: &str = "input";
+
+    #[test]
+    fn part1_test() -> Result<()> {
+        let input = input_generator(INPUT_STR)?;
+        println!("{:?}", input);
+
+        assert_eq!(part1(&input)?, 152);
+        Ok(())
+    }
+
+    #[test]
+    fn part2_test() -> Result<()> {
+        let input = input_generator(INPUT_STR)?;
+        assert_eq!(part2(&input)?, 301);
+        Ok(())
+    }
 }
